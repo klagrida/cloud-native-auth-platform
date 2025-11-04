@@ -5,33 +5,33 @@ A complete authentication and authorization system using OIDC/OAuth2 with Keyclo
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Minikube Cluster                          │
-│                                                               │
+┌────────────────────────────────────────────────────────────┐
+│                    Minikube Cluster                        │
+│                                                            │
 │  ┌─────────────┐         ┌──────────────────────────┐      │
-│  │   Angular   │◄───────►│      Keycloak           │      │
-│  │   Frontend  │  OIDC   │   Identity Provider     │      │
+│  │   Angular   │◄───────►│      Keycloak            │      │
+│  │   Frontend  │  OIDC   │   Identity Provider      │      │
 │  │             │         │   - Realm: demo-realm    │      │
-│  └──────┬──────┘         │   - Users & Roles       │      │
+│  └──────┬──────┘         │   - Users & Roles        │      │
 │         │                └──────────┬───────────────┘      │
 │         │ HTTP + JWT              │                        │
 │         │                          │ JDBC                  │
-│         ▼                          ▼                        │
+│         ▼                          ▼                       │
 │  ┌─────────────┐         ┌──────────────────────────┐      │
-│  │ Spring Boot │         │     PostgreSQL          │      │
-│  │   REST API  │         │  - Keycloak DB          │      │
-│  │  (Resource  │         │  - App DB (optional)    │      │
+│  │ Spring Boot │         │     PostgreSQL           │      │
+│  │   REST API  │         │  - Keycloak DB           │      │
+│  │  (Resource  │         │  - App DB (optional)     │      │
 │  │   Server)   │         └──────────────────────────┘      │
-│  └─────────────┘                                            │
-│                                                               │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              NGINX Ingress Controller                 │   │
-│  │  Routes:                                              │   │
-│  │  - app.local        → Angular                        │   │
-│  │  - api.local        → Spring Boot                    │   │
-│  │  - auth.local       → Keycloak                       │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+│  └─────────────┘                                           │
+│                                                            │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │              NGINX Ingress Controller                │  │
+│  │  Routes:                                             │  │
+│  │  - app.local        → Angular                        │  │
+│  │  - api.local        → Spring Boot                    │  │
+│  │  - auth.local       → Keycloak                       │  │
+│  └──────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ## Tech Stack
