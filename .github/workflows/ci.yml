@@ -79,9 +79,67 @@ jobs:
     - name: Test deploy-all.sh
       run: |
         echo "Testing deployment script..."
-        set -x  # Enable verbose mode
         ./scripts/deploy-all.sh
-        set +x  # Disable verbose mode
+
+    # Wait for Keycloak specifically (this is the slowest component)
+    - name: Wait for Keycloak
+      run: |
+        echo "Waiting for Keycloak to be ready..."
+        echo "This typically takes 5-8 minutes in CI"
+
+        # Monitor Keycloak startup
+        for i in {1..60}; do
+          echo ""
+          echo "=== Check $i/60 ($(($i * 10))s elapsed) ==="
+
+          POD_STATUS=$(kubectl get pods -n auth-platform -l app.kubernetes.io/name=keycloak -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
+          READY=$(kubectl get pods -n auth-platform -l app.kubernetes.io/name=keycloak -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "False")
+
+          echo "Pod Status: $POD_STATUS, Ready: $READY"
+          kubectl get pods -n auth-platform -l app.kubernetes.io/name=keycloak -o wide
+
+          if [ "$READY" == "True" ]; then
+            echo "✅ Keycloak is ready!"
+            break
+          fi
+
+          if [ "$POD_STATUS" == "Running" ] && [ $i -gt 12 ]; then
+            echo "Keycloak container logs (last 10 lines):"
+            kubectl logs -n auth-platform -l app.kubernetes.io/name=keycloak --tail=10 2>/dev/null || echo "Cannot fetch logs yet"
+          fi
+
+          if [ "$POD_STATUS" == "Failed" ] || [ "$POD_STATUS" == "CrashLoopBackOff" ]; then
+            echo "❌ Keycloak pod failed!"
+            kubectl describe pod -n auth-platform -l app.kubernetes.io/name=keycloak
+            kubectl logs -n auth-platform -l app.kubernetes.io/name=keycloak --tail=200
+            exit 1
+          fi
+
+          if [ $i -lt 60 ]; then
+            sleep 10
+          fi
+        done
+
+        # Final check
+        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=keycloak -n auth-platform --timeout=60s || {
+          echo "Keycloak failed to become ready"
+          kubectl get pods -n auth-platform -l app.kubernetes.io/name=keycloak -o wide
+          kubectl describe pod -n auth-platform -l app.kubernetes.io/name=keycloak
+          kubectl logs -n auth-platform -l app.kubernetes.io/name=keycloak --tail=200
+          exit 1
+        }
+
+    # Wait for other deployments
+    - name: Wait for All Deployments
+      run: |
+        echo "Waiting for all deployments to become available..."
+        kubectl wait --for=condition=available deployment --all -n auth-platform --timeout=300s || {
+          echo "Deployment wait failed. Current status:"
+          kubectl get pods -n auth-platform -o wide
+          kubectl get deployments -n auth-platform
+          kubectl get events -n auth-platform --sort-by='.lastTimestamp' | tail -50
+          exit 1
+        }
 
         # Verify all pods are running
         echo "Current pod status:"
@@ -90,16 +148,6 @@ jobs:
         # Show deployment status
         echo "Deployment status:"
         kubectl get deployments -n auth-platform
-
-        # Check if all deployments are ready (increased timeout for Keycloak)
-        echo "Waiting for all deployments to become available..."
-        kubectl wait --for=condition=available deployment --all -n auth-platform --timeout=900s || {
-          echo "Deployment wait failed. Current status:"
-          kubectl get pods -n auth-platform -o wide
-          kubectl get deployments -n auth-platform
-          kubectl get events -n auth-platform --sort-by='.lastTimestamp' | tail -50
-          exit 1
-        }
 
         # Verify services exist
         kubectl get svc -n auth-platform | grep postgres

@@ -32,6 +32,12 @@ spec:
             secretKeyRef:
               name: postgres-secret
               key: POSTGRES_PASSWORD
+        - name: JAVA_OPTS_APPEND
+          value: "-Xms512m -Xmx1536m -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=256m -Djava.net.preferIPv4Stack=true"
+        - name: KC_HEALTH_ENABLED
+          value: "true"
+        - name: KC_METRICS_ENABLED
+          value: "true"
         envFrom:
         - configMapRef:
             name: keycloak-config

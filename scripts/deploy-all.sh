@@ -97,14 +97,22 @@ echo "Waiting for Keycloak to be ready (this may take 5-8 minutes in CI environm
 echo "Checking Keycloak pod status..."
 kubectl get pods -n auth-platform -l app.kubernetes.io/name=keycloak
 
-# Wait with longer timeout
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=keycloak -n auth-platform --timeout=600s || {
-  echo "Keycloak readiness check timed out. Checking pod status and logs..."
+# In CI, skip the wait as we do it separately in the workflow
+if [ -z "$CI" ] && [ -z "$GITHUB_ACTIONS" ]; then
+  # Local environment - wait for Keycloak
+  kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=keycloak -n auth-platform --timeout=600s || {
+    echo "Keycloak readiness check timed out. Checking pod status and logs..."
+    kubectl get pods -n auth-platform -l app.kubernetes.io/name=keycloak
+    kubectl describe pod -n auth-platform -l app.kubernetes.io/name=keycloak
+    kubectl logs -n auth-platform -l app.kubernetes.io/name=keycloak --tail=100
+    exit 1
+  }
+else
+  # CI environment - just deploy and let the workflow wait
+  echo "CI environment detected - skipping wait in script (workflow will wait)"
+  sleep 5  # Brief pause to let pod start creating
   kubectl get pods -n auth-platform -l app.kubernetes.io/name=keycloak
-  kubectl describe pod -n auth-platform -l app.kubernetes.io/name=keycloak
-  kubectl logs -n auth-platform -l app.kubernetes.io/name=keycloak --tail=100
-  exit 1
-}
+fi
 
 echo "4. Deploying Backend..."
 kubectl apply -f k8s/backend/configmap.yaml
