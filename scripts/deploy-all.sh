@@ -6,33 +6,77 @@ echo "===================================="
 echo "Deploying Auth Platform to Kubernetes"
 echo "===================================="
 
+# Check if minikube is running
+if ! minikube status &>/dev/null; then
+    echo "Error: Minikube is not running. Please run setup-minikube.sh first."
+    exit 1
+fi
+
 # Ensure we're using minikube docker environment
 echo "Configuring Docker environment..."
 eval $(minikube docker-env)
+
+# Verify docker is accessible
+if ! docker info &>/dev/null; then
+    echo "Error: Cannot connect to Docker. Make sure Docker is running."
+    exit 1
+fi
+
+echo "Docker environment configured successfully"
 
 # Build Docker images
 echo ""
 echo "Building Docker images..."
 
 echo "Building frontend image..."
-cd frontend
-docker build -t auth-platform/angular-frontend:latest .
-cd ..
+if [ -d "frontend" ]; then
+    cd frontend
+    docker build -t auth-platform/angular-frontend:latest . || {
+        echo "Error: Failed to build frontend image"
+        exit 1
+    }
+    cd ..
+    echo "✓ Frontend image built"
+else
+    echo "Error: frontend directory not found"
+    exit 1
+fi
 
+echo ""
 echo "Building backend image..."
-cd backend
-docker build -t auth-platform/spring-backend:latest .
-cd ..
+if [ -d "backend" ]; then
+    cd backend
+    docker build -t auth-platform/spring-backend:latest . || {
+        echo "Error: Failed to build backend image"
+        exit 1
+    }
+    cd ..
+    echo "✓ Backend image built"
+else
+    echo "Error: backend directory not found"
+    exit 1
+fi
 
+echo ""
 echo "Docker images built successfully!"
-docker images | grep auth-platform
+docker images | grep auth-platform || echo "Warning: Could not list images"
 
 # Deploy to Kubernetes
 echo ""
 echo "Deploying to Kubernetes..."
 
+# Verify kubectl can reach cluster
+echo "Verifying Kubernetes cluster connectivity..."
+if ! kubectl cluster-info &>/dev/null; then
+    echo "Error: Cannot connect to Kubernetes cluster"
+    exit 1
+fi
+echo "✓ Connected to Kubernetes cluster"
+
+echo ""
 echo "1. Creating namespace..."
 kubectl apply -f k8s/namespace.yaml
+kubectl get namespace auth-platform
 
 echo "2. Deploying PostgreSQL..."
 kubectl apply -f k8s/postgres/secret.yaml

@@ -38,10 +38,15 @@ jobs:
     # Make scripts executable
     - name: Make scripts executable
       run: |
-        chmod +x scripts/setup-minikube.sh
-        chmod +x scripts/deploy-all.sh
-        chmod +x scripts/configure-keycloak.sh
-        chmod +x scripts/cleanup.sh
+        chmod +x scripts/*.sh
+        ls -la scripts/
+
+    # Run preflight checks
+    - name: Run Preflight Checks (before setup)
+      continue-on-error: true
+      run: |
+        chmod +x scripts/preflight-check.sh
+        ./scripts/preflight-check.sh || echo "Expected to fail before setup"
 
     # Test setup-minikube.sh
     - name: Test setup-minikube.sh
@@ -64,6 +69,11 @@ jobs:
         cat /etc/hosts | grep auth.local
 
         echo "✅ setup-minikube.sh test passed"
+
+    # Run preflight checks after setup
+    - name: Run Preflight Checks (after setup)
+      run: |
+        ./scripts/preflight-check.sh
 
     # Test deploy-all.sh
     - name: Test deploy-all.sh
