@@ -524,9 +524,20 @@ jobs:
     - name: Import Keycloak Realm
       run: |
         KEYCLOAK_POD=$(kubectl get pods -n auth-platform -l app.kubernetes.io/name=keycloak -o jsonpath='{.items[0].metadata.name}')
-        kubectl cp keycloak/realm-export.json auth-platform/$KEYCLOAK_POD:/tmp/realm-export.json
-        kubectl exec -n auth-platform $KEYCLOAK_POD -- /opt/keycloak/bin/kc.sh import --file /tmp/realm-export.json || true
-        echo "Keycloak realm imported"
+
+        echo "Copying realm configuration to pod..."
+        cat keycloak/realm-export.json | kubectl exec -i -n auth-platform $KEYCLOAK_POD -- sh -c 'cat > /tmp/realm-export.json'
+
+        echo "Verifying file was copied..."
+        kubectl exec -n auth-platform $KEYCLOAK_POD -- sh -c 'ls -lh /tmp/realm-export.json'
+
+        echo "Importing realm configuration..."
+        kubectl exec -n auth-platform $KEYCLOAK_POD -- /opt/keycloak/bin/kc.sh import --file /tmp/realm-export.json || {
+          echo "Import may have failed, checking logs..."
+          kubectl logs -n auth-platform $KEYCLOAK_POD --tail=50 | grep -i "import\|realm" || true
+        }
+
+        echo "Keycloak realm configuration complete"
 
     # Smoke Tests
     - name: Run Smoke Tests

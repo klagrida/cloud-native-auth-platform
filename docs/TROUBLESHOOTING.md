@@ -358,6 +358,27 @@ minikube delete
 ./scripts/configure-keycloak.sh
 ```
 
+## Known Issues
+
+### kubectl cp fails with "tar not found"
+
+**Symptoms:**
+- Error: `exec: "tar": executable file not found in $PATH`
+- Occurs when trying to copy files to Keycloak pod
+
+**Solution:**
+Use stdin instead of `kubectl cp`:
+
+```bash
+# Instead of:
+kubectl cp file.json namespace/pod:/tmp/file.json
+
+# Use:
+cat file.json | kubectl exec -i -n namespace pod -- sh -c 'cat > /tmp/file.json'
+```
+
+This is because the Keycloak container image doesn't include `tar`, which `kubectl cp` requires.
+
 ## Getting Help
 
 ### Collect Diagnostic Information

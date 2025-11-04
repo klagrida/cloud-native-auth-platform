@@ -15,13 +15,21 @@ KEYCLOAK_POD=$(kubectl get pods -n auth-platform -l app.kubernetes.io/name=keycl
 
 echo "Keycloak pod: $KEYCLOAK_POD"
 
-# Copy realm configuration to pod
+# Copy realm configuration to pod using stdin (doesn't require tar)
 echo "Copying realm configuration to Keycloak pod..."
-kubectl cp keycloak/realm-export.json auth-platform/$KEYCLOAK_POD:/tmp/realm-export.json
+cat keycloak/realm-export.json | kubectl exec -i -n auth-platform $KEYCLOAK_POD -- sh -c 'cat > /tmp/realm-export.json'
+
+# Verify file was copied
+echo "Verifying file was copied..."
+kubectl exec -n auth-platform $KEYCLOAK_POD -- sh -c 'ls -lh /tmp/realm-export.json'
 
 # Import realm
 echo "Importing realm configuration..."
-kubectl exec -n auth-platform $KEYCLOAK_POD -- /opt/keycloak/bin/kc.sh import --file /tmp/realm-export.json || true
+kubectl exec -n auth-platform $KEYCLOAK_POD -- /opt/keycloak/bin/kc.sh import --file /tmp/realm-export.json || {
+  echo "Import command failed, but this might be expected if realm already exists"
+  echo "Checking Keycloak logs for import status..."
+  kubectl logs -n auth-platform $KEYCLOAK_POD --tail=50 | grep -i "import\|realm" || true
+}
 
 echo ""
 echo "===================================="
