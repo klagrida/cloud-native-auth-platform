@@ -49,8 +49,18 @@ kubectl apply -f k8s/keycloak/deployment.yaml
 kubectl apply -f k8s/keycloak/service.yaml
 kubectl apply -f k8s/keycloak/ingress.yaml
 
-echo "Waiting for Keycloak to be ready (this may take 2-3 minutes)..."
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=keycloak -n auth-platform --timeout=300s
+echo "Waiting for Keycloak to be ready (this may take 5-8 minutes in CI environments)..."
+echo "Checking Keycloak pod status..."
+kubectl get pods -n auth-platform -l app.kubernetes.io/name=keycloak
+
+# Wait with longer timeout
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=keycloak -n auth-platform --timeout=600s || {
+  echo "Keycloak readiness check timed out. Checking pod status and logs..."
+  kubectl get pods -n auth-platform -l app.kubernetes.io/name=keycloak
+  kubectl describe pod -n auth-platform -l app.kubernetes.io/name=keycloak
+  kubectl logs -n auth-platform -l app.kubernetes.io/name=keycloak --tail=100
+  exit 1
+}
 
 echo "4. Deploying Backend..."
 kubectl apply -f k8s/backend/configmap.yaml
