@@ -117,6 +117,49 @@ mvn spring-boot:run
 - [Setup Guide](docs/SETUP.md) - Detailed setup instructions
 - [Deployment Guide](docs/DEPLOYMENT.md) - Kubernetes deployment
 - [API Documentation](docs/API.md) - API endpoints and usage
+- [CI/CD Guide](docs/CI-CD.md) - CI/CD pipeline documentation
+
+## Troubleshooting
+
+### Debugging Failed Deployments
+
+1. **Run Preflight Checks:**
+   ```bash
+   ./scripts/preflight-check.sh
+   ```
+
+2. **Monitor Deployment:**
+   ```bash
+   ./scripts/monitor-deployment.sh auth-platform 600
+   ```
+
+3. **Check Keycloak Startup:**
+   ```bash
+   ./scripts/wait-for-keycloak.sh
+   ```
+
+4. **Debug in GitHub Actions:**
+   - Go to Actions tab
+   - Run "Debug CI Issues" workflow
+   - Select component to debug
+   - Review detailed logs
+
+### Common Issues
+
+**Keycloak takes too long to start:**
+- Increase memory limits in `k8s/keycloak/deployment.yaml`
+- Check PostgreSQL is ready first
+- Review Keycloak logs: `kubectl logs -n auth-platform -l app.kubernetes.io/name=keycloak`
+
+**Pods stuck in Pending:**
+- Check node resources: `kubectl describe nodes`
+- Reduce resource requests in deployment manifests
+- Check PVC status: `kubectl get pvc -n auth-platform`
+
+**Build failures:**
+- Ensure Docker daemon is accessible
+- Run `eval $(minikube docker-env)` first
+- Check build logs for specific errors
 
 ## Project Structure
 

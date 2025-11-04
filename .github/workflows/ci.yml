@@ -15,7 +15,7 @@ jobs:
   test-scripts:
     name: Test Deployment Scripts
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
     # Checkout code
@@ -79,13 +79,27 @@ jobs:
     - name: Test deploy-all.sh
       run: |
         echo "Testing deployment script..."
+        set -x  # Enable verbose mode
         ./scripts/deploy-all.sh
+        set +x  # Disable verbose mode
 
         # Verify all pods are running
-        kubectl get pods -n auth-platform
+        echo "Current pod status:"
+        kubectl get pods -n auth-platform -o wide
+
+        # Show deployment status
+        echo "Deployment status:"
+        kubectl get deployments -n auth-platform
 
         # Check if all deployments are ready (increased timeout for Keycloak)
-        kubectl wait --for=condition=available deployment --all -n auth-platform --timeout=900s
+        echo "Waiting for all deployments to become available..."
+        kubectl wait --for=condition=available deployment --all -n auth-platform --timeout=900s || {
+          echo "Deployment wait failed. Current status:"
+          kubectl get pods -n auth-platform -o wide
+          kubectl get deployments -n auth-platform
+          kubectl get events -n auth-platform --sort-by='.lastTimestamp' | tail -50
+          exit 1
+        }
 
         # Verify services exist
         kubectl get svc -n auth-platform | grep postgres
