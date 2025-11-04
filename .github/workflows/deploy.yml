@@ -1,0 +1,90 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure kubectl
+      run: |
+        echo "Configuring kubectl with kubeconfig"
+        # Configure your kubeconfig here
+        # mkdir -p ~/.kube
+        # echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+
+    - name: Deploy namespace
+      run: kubectl apply -f k8s/namespace.yaml
+
+    - name: Deploy PostgreSQL
+      run: |
+        kubectl apply -f k8s/postgres/secret.yaml
+        kubectl apply -f k8s/postgres/pvc.yaml
+        kubectl apply -f k8s/postgres/deployment.yaml
+        kubectl apply -f k8s/postgres/service.yaml
+
+    - name: Wait for PostgreSQL
+      run: kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgres -n auth-platform --timeout=120s
+
+    - name: Deploy Keycloak
+      run: |
+        kubectl apply -f k8s/keycloak/configmap.yaml
+        kubectl apply -f k8s/keycloak/deployment.yaml
+        kubectl apply -f k8s/keycloak/service.yaml
+        kubectl apply -f k8s/keycloak/ingress.yaml
+
+    - name: Wait for Keycloak
+      run: kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=keycloak -n auth-platform --timeout=300s
+
+    - name: Deploy Backend
+      run: |
+        kubectl apply -f k8s/backend/configmap.yaml
+        kubectl apply -f k8s/backend/deployment.yaml
+        kubectl apply -f k8s/backend/service.yaml
+        kubectl apply -f k8s/backend/ingress.yaml
+
+    - name: Wait for Backend
+      run: kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=backend -n auth-platform --timeout=180s
+
+    - name: Deploy Frontend
+      run: |
+        kubectl apply -f k8s/frontend/configmap.yaml
+        kubectl apply -f k8s/frontend/deployment.yaml
+        kubectl apply -f k8s/frontend/service.yaml
+        kubectl apply -f k8s/frontend/ingress.yaml
+
+    - name: Wait for Frontend
+      run: kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=frontend -n auth-platform --timeout=120s
+
+    - name: Run smoke tests
+      run: |
+        echo "Running smoke tests"
+        # Add your smoke tests here
+        # curl http://app.local
+        # curl http://api.local/api/public/hello
+
+    - name: Deployment complete
+      run: |
+        echo "Deployment completed successfully!"
+        kubectl get pods -n auth-platform
+        kubectl get services -n auth-platform
+        kubectl get ingress -n auth-platform

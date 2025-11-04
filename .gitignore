@@ -1,0 +1,45 @@
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Angular
+frontend/dist/
+frontend/.angular/
+frontend/.vscode/
+
+# Java
+backend/target/
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# Kubernetes secrets (examples only, not actual secrets)
+k8s/**/*-secret.yaml
+
+# Docker
+.docker/
+
+# Temporary files
+*.tmp
+*.temp

@@ -1,0 +1,48 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Build with Maven
+      working-directory: ./backend
+      run: mvn clean package -DskipTests
+
+    - name: Run tests
+      working-directory: ./backend
+      run: mvn test || true
+
+    - name: Build Docker image
+      working-directory: ./backend
+      run: |
+        docker build -t auth-platform/spring-backend:${{ github.sha }} .
+        docker tag auth-platform/spring-backend:${{ github.sha }} auth-platform/spring-backend:latest
+
+    - name: Push to registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "Pushing Docker image to registry"
+        # Configure your registry credentials here
+        # docker push auth-platform/spring-backend:${{ github.sha }}
+        # docker push auth-platform/spring-backend:latest

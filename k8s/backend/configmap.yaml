@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: auth-platform
+data:
+  KEYCLOAK_ISSUER_URI: http://auth.local/realms/demo-realm
+  KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/demo-realm/protocol/openid-connect/certs

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: auth-platform
+data:
+  API_URL: http://api.local/api
+  KEYCLOAK_URL: http://auth.local
