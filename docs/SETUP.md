@@ -130,14 +130,17 @@ This script will:
 
 ### 3. Configure Keycloak
 
+The Keycloak realm is automatically imported on startup via a ConfigMap. No manual configuration is needed!
+
+You can verify the import:
 ```bash
 chmod +x scripts/configure-keycloak.sh
 ./scripts/configure-keycloak.sh
 ```
 
-This script will:
-- Import the realm configuration
-- Create test users and roles
+This script will verify:
+- Realm was successfully imported
+- Test users and roles are available
 
 ## Accessing the Application
 

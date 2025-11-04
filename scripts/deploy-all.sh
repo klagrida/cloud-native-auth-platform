@@ -89,6 +89,7 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgres -n aut
 
 echo "3. Deploying Keycloak..."
 kubectl apply -f k8s/keycloak/configmap.yaml
+kubectl apply -f k8s/keycloak/realm-configmap.yaml
 kubectl apply -f k8s/keycloak/deployment.yaml
 kubectl apply -f k8s/keycloak/service.yaml
 kubectl apply -f k8s/keycloak/ingress.yaml

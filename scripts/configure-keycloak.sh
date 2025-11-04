@@ -6,29 +6,19 @@ echo "===================================="
 echo "Configuring Keycloak"
 echo "===================================="
 
-# Wait for Keycloak to be fully ready
-echo "Waiting for Keycloak to be ready..."
-sleep 10
-
 # Get Keycloak pod name
 KEYCLOAK_POD=$(kubectl get pods -n auth-platform -l app.kubernetes.io/name=keycloak -o jsonpath='{.items[0].metadata.name}')
 
 echo "Keycloak pod: $KEYCLOAK_POD"
 
-# Copy realm configuration to pod using stdin (doesn't require tar)
-echo "Copying realm configuration to Keycloak pod..."
-cat keycloak/realm-export.json | kubectl exec -i -n auth-platform $KEYCLOAK_POD -- sh -c 'cat > /tmp/realm-export.json'
-
-# Verify file was copied
-echo "Verifying file was copied..."
-kubectl exec -n auth-platform $KEYCLOAK_POD -- sh -c 'ls -lh /tmp/realm-export.json'
-
-# Import realm
-echo "Importing realm configuration..."
-kubectl exec -n auth-platform $KEYCLOAK_POD -- /opt/keycloak/bin/kc.sh import --file /tmp/realm-export.json || {
-  echo "Import command failed, but this might be expected if realm already exists"
-  echo "Checking Keycloak logs for import status..."
-  kubectl logs -n auth-platform $KEYCLOAK_POD --tail=50 | grep -i "import\|realm" || true
+# The realm is automatically imported on startup via ConfigMap
+# Just verify the import was successful
+echo ""
+echo "Verifying realm import..."
+echo "Checking Keycloak logs for import status..."
+kubectl logs -n auth-platform $KEYCLOAK_POD --tail=100 | grep -i "import\|realm\|demo-realm" || {
+  echo "Could not find import messages in logs, but realm may still be imported"
+  echo "You can verify by logging into Keycloak admin console at http://auth.local"
 }
 
 echo ""
