@@ -63,13 +63,12 @@ jobs:
           --selector=app.kubernetes.io/component=controller \
           --timeout=180s
 
-    # Configure Docker environment for Minikube
-    - name: Configure Docker for Minikube
+    # Verify Minikube is running
+    - name: Verify Minikube Status
       run: |
-        eval $(minikube docker-env)
-        echo "DOCKER_HOST=$(minikube docker-env | grep DOCKER_HOST | cut -d '=' -f2 | tr -d '"')" >> $GITHUB_ENV
-        echo "DOCKER_CERT_PATH=$(minikube docker-env | grep DOCKER_CERT_PATH | cut -d '=' -f2 | tr -d '"')" >> $GITHUB_ENV
-        echo "DOCKER_TLS_VERIFY=$(minikube docker-env | grep DOCKER_TLS_VERIFY | cut -d '=' -f2 | tr -d '"')" >> $GITHUB_ENV
+        minikube status
+        kubectl cluster-info
+        kubectl get nodes
 
     # Build Frontend
     - name: Build Frontend Application
@@ -82,7 +81,7 @@ jobs:
     - name: Build Frontend Docker Image
       working-directory: ./frontend
       run: |
-        eval $(minikube docker-env)
+        eval $(minikube -p minikube docker-env)
         docker build -t auth-platform/angular-frontend:latest .
         docker images | grep angular-frontend
 
@@ -97,7 +96,7 @@ jobs:
     - name: Build Backend Docker Image
       working-directory: ./backend
       run: |
-        eval $(minikube docker-env)
+        eval $(minikube -p minikube docker-env)
         docker build -t auth-platform/spring-backend:latest .
         docker images | grep spring-backend
 
