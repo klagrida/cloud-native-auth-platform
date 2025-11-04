@@ -20,11 +20,23 @@ fi
 
 # Start minikube with appropriate resources
 echo "Starting Minikube..."
-minikube start \
-    --cpus=4 \
-    --memory=8192 \
-    --disk-size=20g \
-    --driver=docker
+
+# Detect if running in CI
+if [ -n "$CI" ] || [ -n "$GITHUB_ACTIONS" ]; then
+    echo "CI environment detected, using reduced resources"
+    minikube start \
+        --cpus=2 \
+        --memory=6144 \
+        --disk-size=20g \
+        --driver=docker
+else
+    echo "Local environment detected, using full resources"
+    minikube start \
+        --cpus=4 \
+        --memory=8192 \
+        --disk-size=20g \
+        --driver=docker
+fi
 
 # Enable required addons
 echo "Enabling ingress addon..."
@@ -48,7 +60,6 @@ echo "Minikube IP: $MINIKUBE_IP"
 # Add entries to /etc/hosts (requires sudo)
 echo ""
 echo "Adding entries to /etc/hosts..."
-echo "This requires sudo privileges."
 
 HOSTS_ENTRIES=(
     "app.local"
@@ -57,13 +68,17 @@ HOSTS_ENTRIES=(
 )
 
 for HOST in "${HOSTS_ENTRIES[@]}"; do
-    if grep -q "$HOST" /etc/hosts; then
-        echo "Entry for $HOST already exists in /etc/hosts"
-    else
-        echo "$MINIKUBE_IP $HOST" | sudo tee -a /etc/hosts > /dev/null
-        echo "Added $HOST to /etc/hosts"
-    fi
+    # Remove old entries first
+    sudo sed -i.bak "/$HOST/d" /etc/hosts 2>/dev/null || true
+
+    # Add new entry
+    echo "$MINIKUBE_IP $HOST" | sudo tee -a /etc/hosts > /dev/null
+    echo "Added $HOST to /etc/hosts -> $MINIKUBE_IP"
 done
+
+echo ""
+echo "Current /etc/hosts entries:"
+grep -E "(app|api|auth)\.local" /etc/hosts || echo "No entries found"
 
 # Set kubectl context
 echo ""
